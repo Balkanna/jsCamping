@@ -418,6 +418,7 @@ ul {
 }
 
 @media screen and (max-width: 980px) {
+  
   .messages-container {
     padding: 0 1.4rem;
   }
