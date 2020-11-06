@@ -23,6 +23,7 @@
 html {
   font-size: .87rem;
   color: #333;
+  overflow: hidden;
 }
 
 body {
