@@ -82,7 +82,7 @@ class MessageList {
     const messageFilter = this.getFilterObj();
     // Filtering
     Object.keys(filterConfig).forEach(key => {
-      result = result.filter(item => messageFilter[key](item, filterConfig[key]));
+      result = result.filter(item => messageFilter[key](item, filterConfig[key]))
     });
 
     // Sorting
@@ -138,7 +138,7 @@ class MessageList {
     }
     return false;
   };
-
+  
   remove(id) {
     const index = this._messages.findIndex(item => item.id === id);
     if (index === -1) {
