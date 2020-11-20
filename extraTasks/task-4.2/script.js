@@ -1,28 +1,28 @@
-'use srict'
+﻿'use strict'
 
 function add(x, y) {
-  if (y) {
+  if (y !== undefined) {
     return x + y;
   }
   return (z) => x + z;
 }
 
 function sub(x, y) {
-  if (y) {
+  if (y !== undefined) {
     return x - y;
   }
   return (z) => z - x;
 }
 
 function mul(x, y) {
-  if (y) {
+  if (y !== undefined) {
     return x * y;
   }
   return (z) => x * z;
 }
 
 function div(x, y) {
-  if (y) {
+  if (y !== undefined) {
     return x / y;
   }
   return (z) => z / x;
@@ -38,6 +38,7 @@ function pipe(...arg) {
   };
 }
 
+console.log('Call a function "add" with 2 parameters 6 and 0: ', add(6, 0));
 console.log('Call a function "add" with 2 parameters 6 and 8: ', add(6, 8));
 console.log('Call a function "sub" with 2 parameters 14 and 8: ', sub(14, 8));
 console.log('Call a function "mul" with 2 parameters 8 и 6: ', mul(6, 8));
