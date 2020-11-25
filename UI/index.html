@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="keywords" content="yoga, chat, yogachat">
+  <link rel="stylesheet" href="./style.css">
+  <title>YogaChat</title>
+</head>
+<body>
+  
+  <header class="header">
+    <div class="container">
+      <div class="header__inner">
+        <div class="header__logo">
+          <img src="./images/logo_chat.png" alt="logo" class="logo">
+        </div>
+        <div class="header__authorization">
+          <div class="name-authorization" id="name-authorization">Anna</div>
+          <button class="btn-authorization btn" type="button">Log Out</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="main">
+    <div class="section-top">
+      <button class="btn-icon-users" title="Users list"><span class="iconify" data-icon="carbon:user-avatar" data-inline="false"></span></button>
+      <button class="btn-icon-filter" title="Filter"><span class="iconify" data-icon="mi:filter" data-inline="false"></span></button>
+    </div>
+    <div class="container">
+      <div class="section-left">
+        <form class="main__filter" action="" >
+          <label for="nameFilter">Name:</label>
+          <input class="main__filter-name btn-filter" type="text" placeholder="Type name..." id="nameFilter" size="15">
+          <label for="textFilter">Text:</label>
+          <input class="main__filter-text btn-filter" type="text" placeholder="Type text..." id="textFilter" size="15">
+          <label for="dateFilter">Date:</label>
+          <input class="main__filter-date btn-filter" type="date" name="fromDate" placeholder="dd.mm.yyyy">
+          <input class="main__filter-date btn-filter" type="date" name="toDate">
+          <button class="btn-filter btn" type="submit">Filter</button>
+        </form>
+        <div class="users-list__main" id="users-list__main">
+          <h3 class="users-list__name">All  users</h3>
+          <div class="users-list__content" id="users-list__content"></div>
+        </div>
+      </div>
+      <div class="section-right">
+        <div class="messages-container">
+          <button class="btn-add-messages btn">&#43 10 messages</button>
+          <div class="messages-block" id="messages-block"></div>
+          <div class="message-send">
+            <input class="message-send__input" type="text" placeholder="Write a message...">
+            <button class="message-send__icon">
+              <span class="iconify" data-icon="ic-round-send" data-inline="false"></span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="container">
+      <div class="footer__inner">
+        <div class="footer-left">
+          <div class="footer__author-name">Powered by Anna Balkovskaya</div>
+          <div class="footer__updated-info">Updated 11.10.2020</div>
+        </div>
+        <span class="footer__logo">YogaChat</span>
+        <div class="footer__email">
+          <span>e&#8209;mail&colon; </span>anna.balkovskaya
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <script src="https://code.iconify.design/1/1.0.7/iconify.min.js"></script>
+  <script src="./script.js"></script>
+</body>
+</html>
