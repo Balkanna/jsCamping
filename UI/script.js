@@ -143,7 +143,7 @@ class MessageList {
     const copyObj = Object.assign({}, this._messages[msgIndex]);
 
     Object.keys(editObj).forEach(key => editObj[key](copyObj, msg[key]));
-    
+
     if (msgIndex !== -1 && this._messages[msgIndex].author === this.user) {
       if (MessageList.validate(copyObj)) {
         this._messages[msgIndex] = copyObj;
@@ -458,6 +458,7 @@ console.log('Get messages of users with "Tom" substr in author and "Lorem lorem"
 	author: 'Tom',
   text: 'Lorem lorem'
 }));
+
 console.log('Get messages of users (date): ', messageList.getPage(0, 20, {
   dateFrom: new Date('2020-10-12T20:00:07'),
   dateTo: new Date('2020-10-12T22:05:00')
