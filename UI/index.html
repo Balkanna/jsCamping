@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="keywords" content="yoga, chat, yogachat">
+  <link rel="stylesheet" href="./style.css">
+  <title>YogaChat</title>
+</head>
+<body>
+  
+  <header class="header" id="header"></header>
+
+  <main class="main" id="main">
+    <div class="section-top">
+      <button class="btn-icon-users" title="Users list"><span class="iconify" data-icon="carbon:user-avatar" data-inline="false"></span></button>
+      <button class="btn-icon-filter" title="Filter"><span class="iconify" data-icon="mi:filter" data-inline="false"></span></button>
+    </div>
+    <div class="container">
+      <div class="section-left" id="section-left" >
+        <form class="main__filter" id="main__filter" action="" onsubmit="event.preventDefault(); controller.getFilterResult(event);">
+          <label for="nameFilter">Name:</label>
+          <input class="main__filter-name btn-filter" type="text" id="nameFilter" placeholder="Type name..." name="nameFilter" size="15">
+
+          <label for="textFilter">Text:</label>
+          <input class="main__filter-text btn-filter" type="text" id="textFilter" placeholder="Type text..." name="textFilter" size="15">
+
+          <label for="dateFilter">Date:</label>
+          <input class="main__filter-date btn-filter" id="fromDateFilter" type="date" name="fromDateFilter" >
+          <input class="main__filter-date btn-filter" id="toDateFilter" type="date" name="toDateFilter" >
+
+          <button onsubmit="controller.showMessages(0, 10, {text, author, dateTo, dateFrom})" class="btn-filter btn" id="btn-filter" type="submit">Filter</button>
+        </form>
+        <div class="users-list__main" id="users-list__main">
+          <h3 class="users-list__name">All  users</h3>
+          <div class="users-list__content" id="users-list__content"></div>
+        </div>
+      </div>
+      <div class="section-right" id="section-right">
+        <div class="messages-container">
+          <button class="btn-load-messages btn" id="btn-load-messages">&#43 10 messages</button>
+          <div class="messages-block" id="messages-block"></div>
+          <div class="message-send" id="message-send"></div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <section class="registration-container" id="registration-container">
+    <div class="navigation-link">
+      <div class="back-container"><a class="back-to-chat link" id="back-link-signup">Back to Chat</a></div>
+    </div>
+    <div class="registration-form-block">
+      <h3 class="form-label">Sign Up</h3>
+      <form class="registration-form" action="">
+        <input type="text" class="login registration-input text-input-placeholder" name="sign-up" id="sign-up" placeholder="Enter Login" />  
+        <input type="password" class="password registration-input text-input-placeholder" placeholder="Enter Password" />
+        <input type="password" class="retype-password registration-input text-input-placeholder" placeholder="Confirm Password" />
+        <button type="submit" class="registration-button btn" id="registration-button">Sign Up</button>
+        <div class="account-available">Already have an account? <a class="link-sign-in link" id="link-sign-in">Sign In</a></div>
+      </form>
+    </div>
+  </section>
+
+  <section class="authorization-container" id="authorization-container">
+    <div class="navigation-link">
+      <div class="back-container"><a class="back-to-chat link" id="back-link-signin">Back to Chat</a></div>
+    </div>
+    <div class="authorization-form-block">
+      <h3 class="form-label">Sign In</h3>
+      <form class="authorization-form" action="">
+        <input type="text" class="login authorization-input text-input-placeholder" name="sign-in" id="sign-in" placeholder="Enter Login"/>  
+        <input type="password" class="password authorization-input text-input-placeholder" placeholder="Enter Password"/>
+        <button type="submit" class="authorization-button btn" id="authorization-button">Sign In</button>
+        <div class="account-available">Don't have an account? <a class="link-sign-up link" id="link-sign-up">Sign Up</a></div>
+        <span class="error-message" id="error-message">Incorrect Login or Password!</span>
+      </form>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <div class="container">
+      <div class="footer__inner">
+        <div class="footer-left">
+          <div class="footer__author-name">Powered by Anna Balkovskaya</div>
+          <div class="footer__updated-info">Updated 11.10.2020</div>
+        </div>
+        <span class="footer__logo">YogaChat</span>
+        <div class="footer__email">
+          <span>e&#8209;mail&colon; </span>anna.balkovskaya
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <script src="https://code.iconify.design/1/1.0.7/iconify.min.js"></script>
+  <script src="./script.js"></script>
+</body>
+</html>
