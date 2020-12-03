@@ -1,4 +1,7 @@
-﻿class Message {
+﻿const LOCALSTORAGE_KEY = 'messages';
+
+class Message {
+
   constructor(id, createdAt, author, text, isPersonal, to) {
     this._id = id;
     this._createdAt = createdAt;
@@ -79,17 +82,28 @@ class MessageList {
   set messages(value) {
     this._messages = value;
   }
+
+  restore() {
+    const rawMessages = JSON.parse(localStorage.getItem(LOCALSTORAGE_KEY));
+    this._messages = rawMessages.map((item) => new Message(item));
+  }
+
+  save() {
+    localStorage.setItem(
+      LOCALSTORAGE_KEY, JSON.stringify(this._messages)
+    );
+  }
    
   get(id) {
     return this._messages.find(item => item.id === id);
   };
 
   getPage(skip = 0, top = 10, filterConfig = {}) {
-    const filterObj = {
+    const filterObj = { 
       text: (item, text) => text && item.text.toLowerCase().includes(text.toLowerCase()),
       author: (item, author) => author && item.author.toLowerCase().includes(author.toLowerCase()),
       dateTo: (item, dateTo) => dateTo && item.createdAt < dateTo,
-      dateFrom: (item, dateFrom) => dateFrom && item.createdAt > dateFrom
+      dateFrom: (item, dateFrom) => dateFrom && item.createdAt > dateFrom,
     }
 
     let result = this._messages.slice().filter(item => {
@@ -108,9 +122,11 @@ class MessageList {
   };
 
   add(msg) {
+    console.log(this);
     const newMsg = new Message(Math.random().toString(36).substr(2, 10), new Date(), this.user, msg.text, msg.isPersonal, msg.to);
     if (MessageList.validate(newMsg) && msg.author === this.user) {
       this._messages.push(newMsg);
+      this.save();
       return true; 
     }
     return false; 
@@ -147,6 +163,7 @@ class MessageList {
     if (msgIndex !== -1 && this._messages[msgIndex].author === this.user) {
       if (MessageList.validate(copyObj)) {
         this._messages[msgIndex] = copyObj;
+        this.save();
         return true;
       }
     }
@@ -158,6 +175,7 @@ class MessageList {
 
     if (this._messages[index].author === this.user && index !== -1 ) {
       this._messages.splice(index, 1);
+      this.save();
       return true;
     }
     return false;
@@ -174,6 +192,7 @@ class MessageList {
 
   clear() {
     this._messages = [];
+    this.save();
   }
 }
 
@@ -196,11 +215,34 @@ class HeaderView {
   constructor(id) {
     this.id = id;
   }
+
   display(user) {
-    let userHeader = document.getElementById(this.id);
-    if (user !== undefined) {
-      userHeader.innerHTML = user;
-    }
+    let btnAuthorization = document.getElementById("header");
+    let messageSend = document.getElementById("message-send");
+  
+    btnAuthorization.innerHTML = 
+    `<div class="container">
+      <div class="header__inner">
+        <div class="header__logo">
+          <img src="./images/logo_chat.png" alt="logo" class="logo">
+        </div>
+        <div class="header__authorization" id="header__authorization">
+          <div class="name-authorization" id="name-authorization">${messageList.user ? user : ''}</div>
+          ${(messageList.user !== undefined) ?
+          `<button class="btn-sign-out btn" id="btn-sign-out" type="button">Sign Out</button>`:
+          `<button class="btn-sign-in btn" id="btn-sign-in" type="button">Sign In</button>`}
+        </div>
+      </div>
+    </div>`;
+
+    messageSend.innerHTML = 
+      `<form onsubmit="event.preventDefault(); controller.sendMessage(event)">
+        <textarea class="message-send__input" id="message-send__input" type="text" placeholder="Write a message..." ${messageList.user !== undefined ? '' : 'disabled'}></textarea>
+        <button type="submit" class="message-send__icon" ${messageList.user !== undefined ? '' : 'disabled'}>
+          <span class="iconify" data-icon="ic-round-send" data-inline="false"></span>
+        </button>
+      </form>
+      `
   }
 }
 
@@ -231,22 +273,22 @@ class MessagesView {
   display(msgs) {
     const messagesList = document.getElementById(this.id);
     messagesList.innerHTML = msgs.map( msg => {
-      let date = msg.createdAt.toLocaleDateString();
+      let createdAt = msg.createdAt.toLocaleDateString();
       let time = msg.createdAt.toLocaleTimeString().slice(0, -3);
 
       return (`
         <div class="message-chat">
-          <div class="message-chat__info ${msg.author === messageList.user ? "user-chat__info" : "" }">
+          <div id="message-chat__info" class="message-chat__info ${msg.author === messageList.user ? "user-chat__info" : "" }">
             <div class="message__name">${msg.author}</div>
             <div class="message__time">${time}</div>
-            <div class="message__date">${date}</div>
+            <div class="message__date">${createdAt}</div>
           </div>
-          <div class="message__container ${msg.author === messageList.user ? "user-message" : "" }">
+          <div id="message__container" class="message__container ${msg.author === messageList.user ? "user-message" : "" }">
             <div class="message__text">${msg.text}</div>
             ${msg.author === messageList.user ? 
-            `<div class="user-message__change">
-              <button button class="btn-edit" title="Edit"><span class="iconify" data-icon="ic-baseline-edit" data-inline="false"></span></button>
-              <button class="btn-delete" title="Delete"><span class="iconify" data-icon="ic-baseline-delete-outline" data-inline="false"></span></button>
+            `<div class="user-message__change" id="user-message__change">
+              <button class="btn-edit" id="btn-edit" title="Edit"><span class="iconify iconify-edit" id="iconify-edit" data-icon="ic-baseline-edit" data-inline="false"></span></button>
+              <button class="btn-delete" id="btn-delete" title="Delete"><span class="iconify iconify-delete" id="iconify-delete" data-icon="ic-baseline-delete-outline" data-inline="false"></span></button>
             </div>` : ''}
           </div>
         </div>
@@ -255,33 +297,144 @@ class MessagesView {
   } 
 }
 
-function setCurrentUser(user) {
-  messageList.user = user;
-  return headerView.display(user);
-}
-
-function showActiveUsers() {
-  return activeUsersView.display(userList.activeUsers);
-}
-
-function showMessages(skip = 0, top = 10, filterConfig = {}) {
-  return messagesView.display(messageList.getPage(skip, top, filterConfig));
-}
-
-function addMessage(msg) {
-  if (messageList.add(msg)) {
-    showMessages(0, 10);
+class ChatController {
+  constructor() {
+    this.userList = new UserList(['Alexander', 'Alice', 'Elon', 'Max','Tom', 'Natasha'], ['Alexander', 'Alice', 'Elon', 'Max','Tom']);
+    this.activeUsersView = new ActiveUsersView('users-list__content');
+    this.headerView = new HeaderView('header');
+    this.messagesView = new MessagesView('messages-block');
+    this._numberLoadedMessages = 10;                         
   }
-}
 
-function removeMessage(id) {
-  messageList.remove(id);
-  return messagesView.display(messageList.getPage());
-}
+  get numberLoadedMessages() {
+    return this._numberLoadedMessages;
+  }
 
-function editMessage(id, msg) {
-  messageList.edit(id, msg);
-  return messagesView.display(messageList.getPage());
+  set numberLoadedMessages(num) {
+      this._numberLoadedMessages = num;
+  }
+
+  setCurrentUser(user) {
+    messageList.user = user;
+    this.headerView.display(user);
+  }
+
+  showActiveUsers() {
+    this.activeUsersView.display(this.userList.activeUsers);
+  }
+
+  showMessages(skip = 0, top = 10, filterConfig = {}) {
+    this.messagesView.display(messageList.getPage(skip, top, filterConfig));
+  }
+
+  addMessage(msg) {
+    if (messageList.add(msg)) {
+      this.showMessages(0, 10);
+    }
+  }
+
+  removeMessage(id) {
+    messageList.remove(id);
+    this.messagesView.display(messageList.getPage());
+  }
+
+  editMessage(id, msg) {
+    messageList.edit(id, msg);
+    this.messagesView.display(messageList.getPage());
+  }
+
+  moveToLoginPage() {
+    document.getElementById('main').style.display = "none";
+    document.getElementById('authorization-container').style.display = "block";
+    document.getElementById('registration-container').style.display = "none";
+    btnSignInHeader.style.display = "none";
+  }
+
+  moveToRegistrPage() {
+    document.getElementById('registration-container').style.display = "block";
+    document.getElementById('authorization-container').style.display = "none";
+    btnSignInHeader.style.display = "none";
+  }
+
+  returnToChatPage() {
+    document.getElementById('registration-container').style.display = "none";
+    document.getElementById('authorization-container').style.display = "none";
+    document.getElementById('main').style.display = "block";
+    btnSignInHeader.style.display = "block";
+  }
+
+  returnToChatPage2() {
+    controller.setCurrentUser();
+    document.getElementById('main').style.display = "block";
+    btnSignOut.style.display = "none";
+    controller.showMessages(0, 10);
+    controller.moveToRegistrPage();
+    console.log('Click: back!');
+  }
+
+  getFilterResult() {
+    const filterConfig = {};
+
+    let author = document.getElementById('nameFilter').value;
+    let text = document.getElementById('textFilter').value;
+    let dateFrom = new Date(document.getElementById('fromDateFilter').value);
+    let dateTo = new Date(document.getElementById('toDateFilter').value);
+
+    if (author) {
+      filterConfig.author = author;
+    };
+
+    if (text) {
+      filterConfig.text = text;
+    };
+
+    if (dateFrom.toString() !== 'Invalid Date') {
+      filterConfig.dateFrom = dateFrom;
+    };
+
+    if (dateTo.toString() !== 'Invalid Date') {
+      filterConfig.dateTo = dateTo;
+    };
+
+    this.showMessages(0, 10, filterConfig);
+    console.log('Submit form');
+  }
+
+  sendMessage(msg) { //TODO
+    let newMessage = document.getElementById('message-send__input').value;
+    //this.addMessage({ text: newMessage });
+    //this.addMessage({id: Math.random().toString(36).substr(2, 10), createdAt: new Date(), author: MessageList.user, text: newMessage, isPersonal: false});
+    this.showMessages(0, 30, {id: Math.random().toString(36).substr(2, 10), createdAt: new Date(), author: MessageList.user, text: newMessage, isPersonal: false});
+    document.getElementById('message-send__input').value = '';
+    console.log('Add message!');
+    console.log(newMessage);
+  }
+
+  loadMoreMessages() {
+    let number = this.numberLoadedMessages + 10;
+    this.showMessages(0, number);
+    this.numberLoadedMessages = number;
+  }
+
+  login(user) {
+    const btnRegistration = document.getElementById("registration-button");
+    btnRegistration.addEventListener('click', this.moveToRegistrPage);
+
+    const returnToChatButton = document.getElementById("return-to-chat");
+    returnToChatButton.addEventListener('click', this.returnToChatPage);
+
+    if (this.userList.users.includes(user)) {
+
+      localStorage.setItem("user", user);
+      this.setCurrentUser(user);
+      this.showMessages();
+      this.returnToChatPage();
+    }
+    else {
+      document.getElementById("error-message").style.display = "inline";
+    }
+  }
+
 }
 
 const messageList = new MessageList([
@@ -429,27 +582,75 @@ const messageList = new MessageList([
     author: 'Anna',
     isPersonal: false,
   }
-  ]); 
+]); 
 
-const userList = new UserList(['Alexander', 'Alice', 'Elon', 'Max','Tom', 'Natasha'], ['Alexander', 'Alice', 'Elon', 'Max','Tom']);
+const controller = new ChatController();
+
+controller.setCurrentUser('Anna');
+//controller.setCurrentUser();
+
+controller.showActiveUsers(this.userList);
+controller.showMessages();
+controller.editMessage('19', {text: 'Hello! I have already changed the text of this message!'});
+//controller.removeMessage('20');
+controller.addMessage(new Message(Math.random().toString(36).substr(2, 10), new Date(), 'Anna','Hello! I have already added the new message! Wow)', false));
+
+const btnLoadMessages = document.getElementById("btn-load-messages");
+btnLoadMessages.addEventListener('click', () => {controller.loadMoreMessages()});
+
+const messagesBlock = document.getElementById("messages-block"); //TODO
+messagesBlock.addEventListener('click', event => {
+  const target = event.target;
+  const targetClassList = target.classList;
+
+  switch (true) {
+    case targetClassList.contains('messages-block'):
+      break;
+
+    case targetClassList.contains('btn-edit'):
+      controller.editMessage(target.parentNode.parentNode.id);
+      console.log('Edit!');
+      break;
+
+    case targetClassList.contains('btn-delete'):
+      confirm("Do you want to delete this message?");
+      controller.removeMessage(target.parentNode.parentNode.id);
+      console.log("Delete!");
+      break;
+  }
+  console.log('Click!');
+  console.log(target, targetClassList);
+});
+
+/*const btnSignInHeader = document.getElementById("btn-sign-in");
+btnSignInHeader.addEventListener('click', controller.moveToLoginPage);*/
+const linkSignIn = document.getElementById("link-sign-in");
+linkSignIn.addEventListener('click', controller.moveToLoginPage);
+
+const btnSignOut = document.getElementById("btn-sign-out");
+btnSignOut.addEventListener('click', controller.returnToChatPage2);
+
+const linkSignUp = document.getElementById("link-sign-up");
+linkSignUp.addEventListener('click', controller.moveToRegistrPage);
+
+const linkBackToChat = document.getElementById("back-link-signin");
+linkBackToChat.addEventListener('click', controller.returnToChatPage);
+const linkBackToChat2 = document.getElementById("back-link-signup");
+linkBackToChat2.addEventListener('click', controller.returnToChatPage);
+
+/*const userList = new UserList(['Alexander', 'Alice', 'Elon', 'Max','Tom', 'Natasha'], ['Alexander', 'Alice', 'Elon', 'Max','Tom']);
 const activeUsersView = new ActiveUsersView('users-list__content');
-const headerView = new HeaderView('name-authorization');
+const headerView = new HeaderView('header');
 const messagesView = new MessagesView('messages-block');
 
-setCurrentUser('Anna');
-
+setCurrentUser();
 showActiveUsers();
-
 showMessages(0, 10);
-
 editMessage('19', {text: 'Hello! I have already changed the text of this message!'});
-
 removeMessage('20');
-
 addMessage(new Message(Math.random().toString(36).substr(2, 10), new Date(), 'Anna','Hello! I have already added the new message! Wow)', false));
-
+*/
 /*console.log('Msgs collections: ', messageList);
-
 console.log('Get message id = 3: ', messageList.get('3'));
 console.log('Get messages (default): ', messageList.getPage());
 console.log('Get 10 messages: ', messageList.getPage(0,10));
@@ -458,16 +659,13 @@ console.log('Get messages of users with "Tom" substr in author and "Lorem lorem"
 	author: 'Tom',
   text: 'Lorem lorem'
 }));
-
 console.log('Get messages of users (date): ', messageList.getPage(0, 20, {
   dateFrom: new Date('2020-10-12T20:00:07'),
   dateTo: new Date('2020-10-12T22:05:00')
 }));
-
 console.log('Add the message, where author = user: ', messageList.add(new Message(Math.random().toString(36).substr(2, 10), new Date(), 'Anna','Hi Alice', true, 'Alice')));
 console.log('Example: ', new Message(Math.random().toString(36).substr(2, 10), new Date(), 'Anna','Hi Alice', true, 'Alice'));
 console.log('Msgs collections after adding the valid message, where author = user: ', messageList);
-
 console.log('Add the message, where author != user: ', messageList.add(new Message(Math.random().toString(36).substr(2, 10), new Date(), 'Elon','Hi Alice', true, 'Alice')));
 console.log('Msgs collections after adding the valid message, where author != user: ', messageList);
 console.log('Msg example, where text > 200 words: ', {
@@ -481,19 +679,14 @@ console.log('Add the invalid message (>200 words): ', messageList.add({
   isPersonal: false
 }));
 console.log('Msgs collections after adding the invalid message (>200 words): ', messageList);
-
 console.log('Check valid message:', MessageList.validate(new Message(Math.random().toString(36).substr(2, 10), new Date(), 'Anna','Hi Tom', true, 'Alice')));
-
 console.log('Check invalid message:', MessageList.validate(new Message(Math.random().toString(36).substr(2, 10), new Date(), 'Anna','Hi Alice', true)));
-
 console.log('Edit message, where author = user:', messageList.edit('15', {text:'I changed!'}));
 console.log('Edit message, where author != user:', messageList.edit('4', {text:'Hello World!'}));
 console.log('Msgs collections after editing: ', messageList);
-
 console.log('Remove message id = 3, where author = user:', messageList.remove('3'));
 console.log('Remove message id = 1, where author != user:', messageList.remove('1'));
 console.log('Msgs collections after removing: ', messageList);
-
 console.log('Add all:', messageList.addAll(messageList));*/
 
 //console.log(messageList.clear(messages));

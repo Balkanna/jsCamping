@@ -82,10 +82,14 @@ ul {
   font-size: 1.14rem;
 }
 
+.error-message {
+  display: none;
+  color: #FF0000;
+}
+
 .btn {
   padding: 0 1rem;
   width: auto;
-  height: 1.7rem;
   background-color: var(--btn-color);
   border-radius: var(--border-radius);
   border-style: none;
@@ -200,6 +204,7 @@ ul {
   padding: 0 1rem;
   overflow-y: auto;
   width: 100%;
+  max-width: 35rem;;
   height: 43rem;
 }
 
@@ -277,7 +282,7 @@ ul {
   flex-direction: column;
 }
 
-.btn-add-messages {
+.btn-load-messages {
   align-self: center;
 }
 
@@ -360,8 +365,9 @@ ul {
   width: 45%;
 }
 
-.message-send input[placeholder] {
-  padding: .64rem;
+.message-send textarea[placeholder] {
+  padding-top: .5rem;
+  padding-left: .5rem;
 }
 
 .message-send__icon {
@@ -373,7 +379,7 @@ ul {
 
 .iconify {
   width: 2.2rem;
-  height: 2.2rem;
+  height: 2.6rem;
   color: var(--blue-color);
   cursor: pointer;
 }
@@ -501,4 +507,66 @@ ul {
   .footer__email {
     margin-top: 0;
   }
+}
+
+/*Sign Up*/
+
+.back-container {
+  margin: 2rem;
+}
+
+.registration-container,
+.authorization-container {
+  display: none;
+}
+
+.registration-form-block,
+.authorization-form-block {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  background-color: #89EFBF;
+  border-radius: 2rem;
+  max-width: 28rem;
+  margin: 10rem auto;
+  padding: 3rem 0;
+}
+
+.registration-form,
+.authorization-form {
+  display: flex;
+  flex-direction: column;
+  width: 17rem;
+}
+
+.form-label {
+  margin: 0;
+  color: var(--text-color);
+  font-size: 2rem;
+}
+
+.registration-input,
+.authorization-input {
+  background-color: var(--text-color);
+  padding: 1rem;
+  margin-top: .6rem;
+  border-radius: 2rem;
+  border: none;
+}
+
+.registration-button,
+.authorization-button {
+  padding: .5rem 0;
+  margin-top: 1.5rem;
+}
+
+.link {
+  color: var(--blue-color);
+  cursor: pointer;
+}
+
+.account-available {
+  margin-top: .4rem;
+  text-align: center;
 }
