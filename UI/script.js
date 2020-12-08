@@ -315,7 +315,7 @@ class ChatController {
   }
 
   set numberLoadedMessages(num) {
-      this._numberLoadedMessages = num;
+    this._numberLoadedMessages = num;
   }
 
   setCurrentUser(user) {
