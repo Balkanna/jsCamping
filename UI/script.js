@@ -300,6 +300,7 @@ class MessagesView {
 
 class ChatController {
   constructor() {
+    this.chatApiService = new ChatApiService("https://jslabdb.datamola.com/");
     this.userList = new UserList(['Alexander', 'Alice', 'Elon', 'Max','Tom', 'Natasha'], ['Alexander', 'Alice', 'Elon', 'Max','Tom']);
     this.activeUsersView = new ActiveUsersView('users-list__content');
     this.headerView = new HeaderView('header');
@@ -315,7 +316,7 @@ class ChatController {
   }
 
   set numberLoadedMessages(num) {
-    this._numberLoadedMessages = num;
+      this._numberLoadedMessages = num;
   }
 
   setCurrentUser(user) {
@@ -456,11 +457,6 @@ class ChatController {
     const signUpLogin = document.getElementById('sign-up-login'); 
     const signUpPassword = document.getElementById('sign-up-password'); 
     const confirmPassword = document.getElementById('sign-up-confirm'); 
-    
-    console.log('login value - ', signUpLogin.value);
-    console.log('pwd value - ', signUpPassword.value);
-    console.log('confirm-pwd value - ', confirmPassword.value);
-    console.log('before signup users ', this.users);
 
     if (users.filter(item => item.user === signUpLogin.value).length === 1) {
       signUpLogin.style.border = 'var(--border-error)';
@@ -523,6 +519,52 @@ class ChatController {
   }
 };
 
+class ChatApiService {
+  constructor(url) {
+    this.url = url;
+    this._users = null;
+  }
+
+  set url(url) {
+    this._serverURL = url;
+  }
+
+  get url() {
+    return this._url;
+  }
+
+  getMessages() {
+    let headers = new Headers();
+    headers.append(
+      "Authorization",
+      `Bearer ${localStorage.getItem("token")}`
+    );
+
+    fetch(`${this.url}messages?skip=0&top=10`, {
+      method: "GET",
+      headers: headers,
+    })
+      .then( data => {
+        return data.json();
+      })
+      .then( messages => {
+        messagesView.display(messages, user);
+        localStorage.setItem("messages", JSON.stringify(messages));
+      });
+  }
+
+  getUsers() {
+    const url = `${this.url}/users`;
+    return fetch(url)
+    .then( response => {
+      return {
+        status: response.status,
+        result: response.json()
+      }
+    });
+  }
+
+}
 
 const messageList = new MessageList([
   {
