@@ -4,8 +4,9 @@
   --btn-color: rgba(44,146,230,0.75);
   --shadow-hover: 0 .5rem 1.4rem 0 rgba(0,0,0,0.2);
   --header-footer-color: #19C39F;
-  --line-heigt: 1.5;
+  --line-height: 1.5;
   --border-radius: 1.4rem;
+  --border-error: 1px solid #FF0000;
 }
 
 *, 
@@ -30,7 +31,7 @@ body {
   min-width: 320px;
   font-family: 'Roboto', sans-serif;
   margin: 0;
-  line-height: var(--line-heigt);
+  line-height: var(--line-height);
 }
 
 ul {
@@ -82,7 +83,15 @@ ul {
   font-size: 1.14rem;
 }
 
-.error-message {
+.empty-result {
+  display: none;
+}
+
+.error-message,
+.error-not-match,
+.error-empty,
+.error-login,
+.empty-result {
   display: none;
   color: #FF0000;
 }
@@ -97,14 +106,14 @@ ul {
   color: var(--text-color); 
   font-size: 1.07rem;
   font-weight: bold;
-  line-height: var(--line-heigt);
+  line-height: var(--line-height);
   box-shadow: 0 .28rem .57rem 0 rgba(0,0,0,0.2);
   transition: 0.3s;
 }
 
 .btn:hover {
-  transform: scale(1.1);
-  box-shadow: var(--shadow-hover);
+  text-shadow: 0 0 6px rgba(255, 255, 255, 1);
+  transition: all 0.4s ease 0s;
 }
 
 .main .container{
@@ -161,6 +170,7 @@ ul {
 }
 
 .main__filter label{
+  margin-right: .2rem;
   font-weight: normal;
   font-size: 1.14rem;
   line-height: 1.4;
@@ -171,11 +181,12 @@ ul {
 }
 
 .main__filter-text {
-  width: 40%;
+  width: 38%;
 }
 
 .main__filter-date {
-  width: 31%;
+  margin-right: .3rem;
+  width: 41%;
 }
 
 .main__filter button {
@@ -210,6 +221,7 @@ ul {
 
 .message__container {
   display: flex;
+  justify-content: space-between;
   padding: .5rem 1rem;
   margin: 0;
   box-shadow: 0 .28rem .57rem 0 rgba(0,0,0,0.2);
@@ -220,6 +232,7 @@ ul {
 }
 
 .message-chat .user-message {
+  border: 2px solid #89efbf;
   background-color: white;
 }
 
@@ -242,7 +255,7 @@ ul {
 
 .users-list__main {
   display: block;
-  height: 96%;
+  height: 91%;
   background: rgba(196, 196, 196, 0.4);
 }
 
@@ -319,25 +332,17 @@ ul {
 
 .btn-edit,
 .btn-delete {
-  padding: 0;
   border: 0;
   background-color: transparent;
 }
 
-.btn-edit .iconify,
-.btn-delete .iconify {
-  width: 20px;
-  height: 20px;
-  color: var(--blue-color);
-  cursor: pointer;
+.icon-edit,
+.icon-delete {
+  color: var(--btn-color);
 }
 
-.btn-edit {
-  padding-left: .5rem;
-}
-
-.btn-edit:hover,
-.btn-delete:hover,
+.icon-edit:hover,
+.icon-delete:hover,
 .btn-icon-users:hover,
 .btn-icon-filter:hover {
   transform: scale(1.1);
@@ -366,8 +371,7 @@ ul {
 }
 
 .message-send textarea[placeholder] {
-  padding-top: .5rem;
-  padding-left: .5rem;
+  padding: .5rem 2rem 0 .5rem;
 }
 
 .message-send__icon {
@@ -510,7 +514,6 @@ ul {
 }
 
 /*Sign Up*/
-
 .back-container {
   margin: 2rem;
 }
@@ -569,4 +572,33 @@ ul {
 .account-available {
   margin-top: .4rem;
   text-align: center;
+}
+
+/*Error-page*/
+
+.error-page {
+  display: none;
+}
+.error-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding-top: 5rem;
+}
+
+.error-text {
+  padding: 5rem 28rem 5rem 5rem;
+  background-color: #89EFBF;
+  border-radius: 2rem;
+  max-width: 60rem;
+  text-align: justify;
+}
+
+.image-yoga {
+  width: 100%;
+  max-width: 50rem;
+  position: absolute;
+  right: 0;
+  top: 10rem;
 }

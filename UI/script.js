@@ -1,7 +1,7 @@
-﻿const LOCALSTORAGE_KEY = 'messages';
+﻿let count = 1;
+const generatorId = () => (count++).toString();
 
 class Message {
-
   constructor(id, createdAt, author, text, isPersonal, to) {
     this._id = id;
     this._createdAt = createdAt;
@@ -59,6 +59,7 @@ class Message {
   set isPersonal(value) {
     this._isPersonal = value;
   }
+
 }
 
 class MessageList {
@@ -84,14 +85,15 @@ class MessageList {
   }
 
   restore() {
-    const rawMessages = JSON.parse(localStorage.getItem(LOCALSTORAGE_KEY));
-    this._messages = rawMessages.map((item) => new Message(item));
+    const rawMessages = JSON.parse(localStorage.getItem());
+    this._messages = rawMessages.map(item => new Message(item));
+    return this.messages;
   }
 
   save() {
-    localStorage.setItem(
-      LOCALSTORAGE_KEY, JSON.stringify(this._messages)
-    );
+    localStorage.setItem('messages', JSON.stringify(this._messages));
+    localStorage.setItem('users', JSON.stringify(this.users)); //???
+    localStorage.setItem('currentUser', JSON.stringify(this.user));
   }
    
   get(id) {
@@ -122,8 +124,7 @@ class MessageList {
   };
 
   add(msg) {
-    console.log(this);
-    const newMsg = new Message(Math.random().toString(36).substr(2, 10), new Date(), this.user, msg.text, msg.isPersonal, msg.to);
+    const newMsg = new Message(generatorId(), new Date(), this.user, msg.text, msg.isPersonal, msg.to);
     if (MessageList.validate(newMsg) && msg.author === this.user) {
       this._messages.push(newMsg);
       this.save();
@@ -161,8 +162,8 @@ class MessageList {
     Object.keys(editObj).forEach(key => editObj[key](copyObj, msg[key]));
 
     if (msgIndex !== -1 && this._messages[msgIndex].author === this.user) {
-      if (MessageList.validate(copyObj)) {
-        this._messages[msgIndex] = copyObj;
+      if (MessageList.validate(msg)) {
+        this._messages[msgIndex] = msg;
         this.save();
         return true;
       }
@@ -197,9 +198,9 @@ class MessageList {
 }
 
 class UserList {
-  constructor(users = [], activeUsers = []) {
+  constructor(users, activeUsers) {
     this._users = users;
-    this._activeUsers = activeUsers;
+    this._activeUsers = activeUsers || false;
   }
 
   get activeUsers() {
@@ -229,20 +230,20 @@ class HeaderView {
         <div class="header__authorization" id="header__authorization">
           <div class="name-authorization" id="name-authorization">${messageList.user ? user : ''}</div>
           ${(messageList.user !== undefined) ?
-          `<button class="btn-sign-out btn" id="btn-sign-out" type="button">Sign Out</button>`:
-          `<button class="btn-sign-in btn" id="btn-sign-in" type="button">Sign In</button>`}
+            `<button class="btn-sign-out btn" id="btn-sign-out" type="button" onclick="controller.returnToChatPage2()">Sign Out</button>`:
+            `<button class="btn-sign-in btn" id="btn-sign-in" type="button" onclick="controller.moveToLoginPage()">Sign In</button>`}
         </div>
       </div>
     </div>`;
 
     messageSend.innerHTML = 
-      `<form onsubmit="event.preventDefault(); controller.sendMessage(event)">
+      `<form class="form-send-message" id="form-send-message" onsubmit="event.preventDefault(); controller.sendMessage(event)">
         <textarea class="message-send__input" id="message-send__input" type="text" placeholder="Write a message..." ${messageList.user !== undefined ? '' : 'disabled'}></textarea>
-        <button type="submit" class="message-send__icon" ${messageList.user !== undefined ? '' : 'disabled'}>
+        <button type="submit" class="message-send__icon" id="message-send__icon" ${messageList.user !== undefined ? '' : 'disabled'}>
           <span class="iconify" data-icon="ic-round-send" data-inline="false"></span>
         </button>
       </form>
-      `
+    `
   }
 }
 
@@ -277,18 +278,18 @@ class MessagesView {
       let time = msg.createdAt.toLocaleTimeString().slice(0, -3);
 
       return (`
-        <div class="message-chat">
+        <div class="message-chat" id="message-chat">
           <div id="message-chat__info" class="message-chat__info ${msg.author === messageList.user ? "user-chat__info" : "" }">
             <div class="message__name">${msg.author}</div>
             <div class="message__time">${time}</div>
             <div class="message__date">${createdAt}</div>
           </div>
-          <div id="message__container" class="message__container ${msg.author === messageList.user ? "user-message" : "" }">
+          <div id="message__container" class="message__container ${msg.author === messageList.user && messageList.user !== undefined ? "user-message" : "" }">
             <div class="message__text">${msg.text}</div>
             ${msg.author === messageList.user ? 
             `<div class="user-message__change" id="user-message__change">
-              <button class="btn-edit" id="btn-edit" title="Edit"><span class="iconify iconify-edit" id="iconify-edit" data-icon="ic-baseline-edit" data-inline="false"></span></button>
-              <button class="btn-delete" id="btn-delete" title="Delete"><span class="iconify iconify-delete" id="iconify-delete" data-icon="ic-baseline-delete-outline" data-inline="false"></span></button>
+              <button class="btn-edit" id="btn-edit" title="Edit" data-message-id="${msg.id}" onclick="controller.editMessage(this)"><i class="fas fa-pencil-alt icon-edit"></i></button>
+              <button class="btn-delete" id="btn-delete" onclick="controller.removeMessage(${msg.id})" title="Delete"><i class="fas fa-trash-alt icon-delete" id="icon-delete"></i></button>
             </div>` : ''}
           </div>
         </div>
@@ -303,7 +304,10 @@ class ChatController {
     this.activeUsersView = new ActiveUsersView('users-list__content');
     this.headerView = new HeaderView('header');
     this.messagesView = new MessagesView('messages-block');
-    this._numberLoadedMessages = 10;                         
+    this._numberLoadedMessages = 10;   
+    this.editableMessage = null;
+    this.messageText = document.querySelector('#message-send__input');
+    this.messageSubmit = document.querySelector('#message-send__icon');
   }
 
   get numberLoadedMessages() {
@@ -311,7 +315,7 @@ class ChatController {
   }
 
   set numberLoadedMessages(num) {
-      this._numberLoadedMessages = num;
+    this._numberLoadedMessages = num;
   }
 
   setCurrentUser(user) {
@@ -334,13 +338,37 @@ class ChatController {
   }
 
   removeMessage(id) {
-    messageList.remove(id);
-    this.messagesView.display(messageList.getPage());
+    if (confirm('Do you want to delete this message?')) {
+      messageList.remove(id.toString());
+      this.messagesView.display(messageList.getPage());
+      messageList.save();
+    }
   }
 
-  editMessage(id, msg) {
-    messageList.edit(id, msg);
-    this.messagesView.display(messageList.getPage());
+  editMessage(elem) {
+    const id = elem.dataset.messageId;
+    this.editableMessage = messageList.messages.find(msg => msg.id === id.toString());
+    document.querySelector('#message-send__input').value = this.editableMessage.text;
+
+    document.getElementById('form-send-message').onsubmit = (event) => {
+      event.preventDefault();
+      const messageField = document.getElementById('form-send-message');
+      const msg = controller.editableMessage;
+      msg.text = document.querySelector('#message-send__input').value;
+
+      if (messageList.edit(msg.id.toString(), msg)) {
+        controller.messagesView.display(messageList.getPage(), messageList.user);
+        messageList.save();
+      }
+
+      controller.editableMessage = null;
+      messageField.reset();
+
+      messageField.onsubmit = (event) => {
+        event.preventDefault();
+        controller.sendMessage(event);
+      };
+    } 
   }
 
   moveToLoginPage() {
@@ -350,25 +378,28 @@ class ChatController {
     btnSignInHeader.style.display = "none";
   }
 
-  moveToRegistrPage() {
+  moveToRegistrationPage() {
     document.getElementById('registration-container').style.display = "block";
     document.getElementById('authorization-container').style.display = "none";
     btnSignInHeader.style.display = "none";
   }
 
-  returnToChatPage() {
+  defaultPage() {
+    this.showMessages(0, 10);
     document.getElementById('registration-container').style.display = "none";
     document.getElementById('authorization-container').style.display = "none";
     document.getElementById('main').style.display = "block";
+  }
+
+  returnToChatPage() {
+    controller.defaultPage();
     btnSignInHeader.style.display = "block";
   }
 
   returnToChatPage2() {
     controller.setCurrentUser();
-    document.getElementById('main').style.display = "block";
-    btnSignOut.style.display = "none";
+    controller.defaultPage();
     controller.showMessages(0, 10);
-    controller.moveToRegistrPage();
     console.log('Click: back!');
   }
 
@@ -400,14 +431,18 @@ class ChatController {
     console.log('Submit form');
   }
 
-  sendMessage(msg) { //TODO
-    let newMessage = document.getElementById('message-send__input').value;
-    //this.addMessage({ text: newMessage });
-    //this.addMessage({id: Math.random().toString(36).substr(2, 10), createdAt: new Date(), author: MessageList.user, text: newMessage, isPersonal: false});
-    this.showMessages(0, 30, {id: Math.random().toString(36).substr(2, 10), createdAt: new Date(), author: MessageList.user, text: newMessage, isPersonal: false});
-    document.getElementById('message-send__input').value = '';
-    console.log('Add message!');
-    console.log(newMessage);
+  reset() {
+    document.getElementById("main__filter").reset();
+  };
+
+  sendMessage() {
+    let messageField = document.querySelector('#message-send__input');
+    let messageText = messageField.value;
+    let msg = { author: this.user, text: messageText, isPersonal: false };
+    this.addMessage(msg);
+    messageField.value = '';
+    console.log('Click: add new message!');
+    console.log(MessageList.validate(msg));
   }
 
   loadMoreMessages() {
@@ -416,114 +451,166 @@ class ChatController {
     this.numberLoadedMessages = number;
   }
 
-  login(user) {
-    const btnRegistration = document.getElementById("registration-button");
-    btnRegistration.addEventListener('click', this.moveToRegistrPage);
+  signUp(event) {
+    event.preventDefault();
+    const signUpLogin = document.getElementById('sign-up-login'); 
+    const signUpPassword = document.getElementById('sign-up-password'); 
+    const confirmPassword = document.getElementById('sign-up-confirm'); 
+    
+    console.log('login value - ', signUpLogin.value);
+    console.log('pwd value - ', signUpPassword.value);
+    console.log('confirm-pwd value - ', confirmPassword.value);
+    console.log('before signup users ', this.users);
 
-    const returnToChatButton = document.getElementById("return-to-chat");
-    returnToChatButton.addEventListener('click', this.returnToChatPage);
-
-    if (this.userList.users.includes(user)) {
-
-      localStorage.setItem("user", user);
-      this.setCurrentUser(user);
-      this.showMessages();
-      this.returnToChatPage();
+    if (users.filter(item => item.user === signUpLogin.value).length === 1) {
+      signUpLogin.style.border = 'var(--border-error)';
+      document.getElementById('error-login').style.display = "inline";
     }
+
+    else if (!signUpLogin.value || signUpLogin.value === ' ') {
+      console.log('1 Error');
+      signUpLogin.style.border = 'var(--border-error)';
+      signUpPassword.style.border = 'var(--border-error)';
+      confirmPassword.style.border = 'var(--border-error)';
+      document.getElementById('error-empty').style.display = "inline";
+    }
+  
+    else if (!signUpPassword.value || !confirmPassword.value || signUpPassword.value !== confirmPassword.value) {
+      console.log('2 Error');
+      signUpPassword.style.border = 'var(--border-error)';
+      confirmPassword.style.border = 'var(--border-error)';
+      document.getElementById('error-empty').style.display = "none";
+      document.getElementById('error-not-match').style.display = "inline";
+    } 
+
     else {
-      document.getElementById("error-message").style.display = "inline";
+      const values = {};
+      values.user = signUpLogin.value;
+      values.password = signUpPassword.value;
+      users.push(values);
+      messageList.user = signUpLogin.value;
+      controller.setCurrentUser(messageList.user);
+      controller.defaultPage();
+      messageList.save();
     }
   }
+    
+  signIn() {
+    const signInLogin = document.getElementById('sign-in-login'); 
+    const signInPassword = document.getElementById('sign-in-password'); 
 
-}
+    if (users.filter((item) => item.user === signInLogin.value).length !== 1) {
+      signInLogin.style.border = 'var(--border-error)';
+      signInPassword.style.border = 'var(--border-error)';
+    }
+    else if (users.filter( item => item.user === signInLogin.value === 1)) {
+      let values = users.filter( item => item.user === signInLogin.value);
+      signInLogin.style.border = 'var(--error-color)';
+      if (values[0].password === signInPassword.value) {
+        console.log('Match');
+        document.getElementById('authorization-container').style.display = "none";
+        this.user = signInLogin.value;
+        this.setCurrentUser(this.user);
+        this.defaultPage();
+        messageList.save();
+      }
+      else {
+        signInPassword.style.border = 'var(--border-error)';
+        document.getElementById('error-message').style.display = "inline";
+        console.log('Incorrect password.');
+      }
+    }
+  }
+};
+
 
 const messageList = new MessageList([
   {
-    id: '1',
+    id: generatorId(),
     text: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit.',
     createdAt: new Date('2020-10-12T20:00:00'),
     author: 'Tom',
     isPersonal: false,
   },
   {
-    id: '2',
+    id: generatorId(),
     text: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit.',
     createdAt: new Date('2020-10-12T20:00:05'),
     author: 'Tom',
     isPersonal: false,
   },
   {
-    id: '3',
+    id: generatorId(),
     text: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit.',
     createdAt: new Date('2020-10-12T20:00:07'),
     author: 'Anna',
     isPersonal: false,
   },
   {
-    id: '4',
+    id: generatorId(),
     text: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit.',
     createdAt: new Date('2020-10-12T20:01:00'),
     author: 'Elon',
     isPersonal: false,
   },
   {
-    id: '5',
+    id: generatorId(),
     text: 'Lorem lorem ipsum dolor sit amet, consectetur adipiscing elit.',
     createdAt: new Date('2020-10-12T20:01:08'),
     author: 'Tom',
     isPersonal: false,
   },
   {
-    id: '6',
+    id: generatorId(),
     text: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit.',
     createdAt: new Date('2020-10-12T20:02:00'),
     author: 'Anna',
     isPersonal: false,
   },
   {
-    id: '7',
+    id: generatorId(),
     text: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit.',
     createdAt: new Date('2020-10-12T20:05:00'),
     author: 'Tom',
     isPersonal: false,
   },
   {
-    id: '8',
+    id: generatorId(),
     text: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit.',
     createdAt: new Date('2020-10-12T20:05:02'),
     author: 'Alice',
     isPersonal: false,
   },
   {
-    id: '9',
+    id: generatorId(),
     text: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit.',
     createdAt: new Date('2020-10-12T20:07:03'),
     author: 'Tom',
     isPersonal: false,
   },
   {
-    id: '10',
+    id: generatorId(),
     text: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit.',
     createdAt: new Date('2020-10-12T21:00:00'),
     author: 'Anna',
     isPersonal: false,
   },
   {
-    id: '11',
+    id: generatorId(),
     text: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit.',
     createdAt: new Date('2020-10-12T21:05:00'),
     author: 'Elon',
     isPersonal: false,
   },
   {
-    id: '12',
+    id: generatorId(),
     text: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit.',
     createdAt: new Date('2020-10-12T21:05:10'),
     author: 'Max',
     isPersonal: false,
   },
   {
-    id: '13',
+    id: generatorId(),
     text: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit.',
     createdAt: new Date('2020-10-12T21:06:00'),
     author: 'Anna',
@@ -531,14 +618,14 @@ const messageList = new MessageList([
     to: 'Alice',
   },
   {
-    id: '14',
+    id: generatorId(),
     text: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit.',
     createdAt: new Date('2020-10-12T21:07:01'),
     author: 'Tom',
     isPersonal: false,
   },
   {
-    id: '15',
+    id: generatorId(),
     text: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit.',
     createdAt: new Date('2020-10-12T22:04:09'),
     author: 'Alexander',
@@ -546,7 +633,7 @@ const messageList = new MessageList([
     to: 'Alice',
   },
   {
-    id: '16',
+    id: generatorId(),
     text: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit.',
     createdAt: new Date('2020-10-12T22:05:00'),
     author: 'Anna',
@@ -554,7 +641,7 @@ const messageList = new MessageList([
     to: 'Tom',
   },
   {
-    id: '17',
+    id: generatorId(),
     text: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit.',
     createdAt: new Date('2020-10-12T22:08:07'),
     author: 'Max',
@@ -562,132 +649,56 @@ const messageList = new MessageList([
   },
   //invalid message
   {
-    id: '18',
+    id: generatorId(),
     text: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit.',
     createdAt: new Date('2020-10-12T22:09:00'),
     author: 'Anna',
     isPersonal: true,
   },
   {
-    id: '19',
+    id: generatorId(),
     text: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit.',
     createdAt: new Date('2020-10-12T22:09:03'),
     author: 'Anna',
     isPersonal: false,
   },
   {
-    id: '20',
+    id: generatorId(),
     text: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit.',
     createdAt: new Date('2020-10-12T22:09:07'),
     author: 'Anna',
     isPersonal: false,
   }
 ]); 
+const users = [{user: 'Anna', password: '777'}];
 
 const controller = new ChatController();
 
-controller.setCurrentUser('Anna');
-//controller.setCurrentUser();
-
+controller.setCurrentUser();
 controller.showActiveUsers(this.userList);
 controller.showMessages();
-controller.editMessage('19', {text: 'Hello! I have already changed the text of this message!'});
-//controller.removeMessage('20');
-controller.addMessage(new Message(Math.random().toString(36).substr(2, 10), new Date(), 'Anna','Hello! I have already added the new message! Wow)', false));
 
 const btnLoadMessages = document.getElementById("btn-load-messages");
 btnLoadMessages.addEventListener('click', () => {controller.loadMoreMessages()});
 
-const messagesBlock = document.getElementById("messages-block"); //TODO
-messagesBlock.addEventListener('click', event => {
-  const target = event.target;
-  const targetClassList = target.classList;
+const btnRegistrationForm = document.getElementById('registration-form');
+btnRegistrationForm.addEventListener('submit', controller.signUp);
 
-  switch (true) {
-    case targetClassList.contains('messages-block'):
-      break;
-
-    case targetClassList.contains('btn-edit'):
-      controller.editMessage(target.parentNode.parentNode.id);
-      console.log('Edit!');
-      break;
-
-    case targetClassList.contains('btn-delete'):
-      confirm("Do you want to delete this message?");
-      controller.removeMessage(target.parentNode.parentNode.id);
-      console.log("Delete!");
-      break;
-  }
-  console.log('Click!');
-  console.log(target, targetClassList);
-});
-
-/*const btnSignInHeader = document.getElementById("btn-sign-in");
-btnSignInHeader.addEventListener('click', controller.moveToLoginPage);*/
+const btnSignInHeader = document.getElementById("btn-sign-in");
+btnSignInHeader.addEventListener('click', controller.moveToLoginPage);
 const linkSignIn = document.getElementById("link-sign-in");
 linkSignIn.addEventListener('click', controller.moveToLoginPage);
 
 const btnSignOut = document.getElementById("btn-sign-out");
-btnSignOut.addEventListener('click', controller.returnToChatPage2);
+//btnSignOut.addEventListener('click', controller.returnToChatPage2);
 
 const linkSignUp = document.getElementById("link-sign-up");
-linkSignUp.addEventListener('click', controller.moveToRegistrPage);
+linkSignUp.addEventListener('click', controller.moveToRegistrationPage);
 
 const linkBackToChat = document.getElementById("back-link-signin");
 linkBackToChat.addEventListener('click', controller.returnToChatPage);
 const linkBackToChat2 = document.getElementById("back-link-signup");
 linkBackToChat2.addEventListener('click', controller.returnToChatPage);
 
-/*const userList = new UserList(['Alexander', 'Alice', 'Elon', 'Max','Tom', 'Natasha'], ['Alexander', 'Alice', 'Elon', 'Max','Tom']);
-const activeUsersView = new ActiveUsersView('users-list__content');
-const headerView = new HeaderView('header');
-const messagesView = new MessagesView('messages-block');
-
-setCurrentUser();
-showActiveUsers();
-showMessages(0, 10);
-editMessage('19', {text: 'Hello! I have already changed the text of this message!'});
-removeMessage('20');
-addMessage(new Message(Math.random().toString(36).substr(2, 10), new Date(), 'Anna','Hello! I have already added the new message! Wow)', false));
-*/
-/*console.log('Msgs collections: ', messageList);
-console.log('Get message id = 3: ', messageList.get('3'));
-console.log('Get messages (default): ', messageList.getPage());
-console.log('Get 10 messages: ', messageList.getPage(0,10));
-console.log('Get messages of users with name "Tom": ', messageList.getPage(0, 10, {author: 'Tom'}));
-console.log('Get messages of users with "Tom" substr in author and "Lorem lorem" in text: ', messageList.getPage(0, 20, {
-	author: 'Tom',
-  text: 'Lorem lorem'
-}));
-console.log('Get messages of users (date): ', messageList.getPage(0, 20, {
-  dateFrom: new Date('2020-10-12T20:00:07'),
-  dateTo: new Date('2020-10-12T22:05:00')
-}));
-console.log('Add the message, where author = user: ', messageList.add(new Message(Math.random().toString(36).substr(2, 10), new Date(), 'Anna','Hi Alice', true, 'Alice')));
-console.log('Example: ', new Message(Math.random().toString(36).substr(2, 10), new Date(), 'Anna','Hi Alice', true, 'Alice'));
-console.log('Msgs collections after adding the valid message, where author = user: ', messageList);
-console.log('Add the message, where author != user: ', messageList.add(new Message(Math.random().toString(36).substr(2, 10), new Date(), 'Elon','Hi Alice', true, 'Alice')));
-console.log('Msgs collections after adding the valid message, where author != user: ', messageList);
-console.log('Msg example, where text > 200 words: ', {
-  text: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Lorem ipsum dolor sit amet, consectetur adipiscing elit.',
-  createdAt: new Date('2020-10-12T20:00:00'),
-  isPersonal: false
-});
-console.log('Add the invalid message (>200 words): ', messageList.add({
-  text: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Lorem ipsum dolor sit amet, consectetur adipiscing elit.',
-  createdAt: new Date('2020-10-12T20:00:00'),
-  isPersonal: false
-}));
-console.log('Msgs collections after adding the invalid message (>200 words): ', messageList);
-console.log('Check valid message:', MessageList.validate(new Message(Math.random().toString(36).substr(2, 10), new Date(), 'Anna','Hi Tom', true, 'Alice')));
-console.log('Check invalid message:', MessageList.validate(new Message(Math.random().toString(36).substr(2, 10), new Date(), 'Anna','Hi Alice', true)));
-console.log('Edit message, where author = user:', messageList.edit('15', {text:'I changed!'}));
-console.log('Edit message, where author != user:', messageList.edit('4', {text:'Hello World!'}));
-console.log('Msgs collections after editing: ', messageList);
-console.log('Remove message id = 3, where author = user:', messageList.remove('3'));
-console.log('Remove message id = 1, where author != user:', messageList.remove('1'));
-console.log('Msgs collections after removing: ', messageList);
-console.log('Add all:', messageList.addAll(messageList));*/
-
-//console.log(messageList.clear(messages));
-//console.log( 'Msgs collections after clearing: ', messageList);*/
+const reset = document.getElementById("btn-reset");
+reset.addEventListener('click', controller.reset);
