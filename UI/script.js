@@ -589,7 +589,6 @@ class ChatApiService {
   }
 
 }
-  
 
 const messageList = new MessageList([
   {
