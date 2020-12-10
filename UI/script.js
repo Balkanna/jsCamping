@@ -117,7 +117,7 @@ class MessageList {
     });
 
     result = result.sort((a, b) => {
-      return  b.createdAt - a.createdAt;
+      return  a.createdAt - b.createdAt;
     }); 
 
     return result.slice(skip, skip+top);
@@ -128,6 +128,7 @@ class MessageList {
     if (MessageList.validate(newMsg) && msg.author === this.user) {
       this._messages.push(newMsg);
       this.save();
+      //this.restore();
       return true; 
     }
     return false; 
@@ -230,7 +231,7 @@ class HeaderView {
         <div class="header__authorization" id="header__authorization">
           <div class="name-authorization" id="name-authorization">${messageList.user ? user : ''}</div>
           ${(messageList.user !== undefined) ?
-            `<button class="btn-sign-out btn" id="btn-sign-out" type="button" onclick="controller.returnToChatPage2()">Sign Out</button>`:
+            `<button class="btn-sign-out btn" id="btn-sign-out" type="button" onclick="controller.returnToChatPage()">Sign Out</button>`:
             `<button class="btn-sign-in btn" id="btn-sign-in" type="button" onclick="controller.moveToLoginPage()">Sign In</button>`}
         </div>
       </div>
@@ -257,7 +258,7 @@ class ActiveUsersView {
     const innerHTML = activeUsers.map( user => (`
         <div class="user-info">
           <div class="circle"></div>
-          <span class="user-name">${user}</span>
+          <a href="#" class="user-name">${user}</a>
           <span class="user-status">online</span> 
         </div>
       `)).join(``);
@@ -309,6 +310,7 @@ class ChatController {
     this.editableMessage = null;
     this.messageText = document.querySelector('#message-send__input');
     this.messageSubmit = document.querySelector('#message-send__icon');
+    this.userName = document.getElementById('user-name');
   }
 
   get numberLoadedMessages() {
@@ -316,7 +318,7 @@ class ChatController {
   }
 
   set numberLoadedMessages(num) {
-      this._numberLoadedMessages = num;
+    this._numberLoadedMessages = num;
   }
 
   setCurrentUser(user) {
@@ -368,8 +370,13 @@ class ChatController {
       messageField.onsubmit = (event) => {
         event.preventDefault();
         controller.sendMessage(event);
+      
       };
     } 
+  }
+
+  privateMessage(){
+    document.getElementById('messages-block').style.display = "none";
   }
 
   moveToLoginPage() {
@@ -385,6 +392,13 @@ class ChatController {
     btnSignInHeader.style.display = "none";
   }
 
+  goToErrorPage() {
+    document.getElementById('main').style.display = "none";
+    document.getElementById('registration-container').style.display = "none";
+    document.getElementById('authorization-container').style.display = "none";
+    document.getElementById('error-page').style.display = "flex";
+  }
+
   defaultPage() {
     this.showMessages(0, 10);
     document.getElementById('registration-container').style.display = "none";
@@ -393,15 +407,10 @@ class ChatController {
   }
 
   returnToChatPage() {
-    controller.defaultPage();
-    btnSignInHeader.style.display = "block";
-  }
-
-  returnToChatPage2() {
     controller.setCurrentUser();
-    controller.defaultPage();
     controller.showMessages(0, 10);
-    console.log('Click: back!');
+    controller.defaultPage();
+    btnSignInHeader.style.display = "none";
   }
 
   getFilterResult() {
@@ -442,8 +451,9 @@ class ChatController {
     let msg = { author: this.user, text: messageText, isPersonal: false };
     this.addMessage(msg);
     messageField.value = '';
+    this.loadMoreMessages();
     console.log('Click: add new message!');
-    console.log(MessageList.validate(msg));
+    //console.log(MessageList.validate(msg));
   }
 
   loadMoreMessages() {
@@ -502,8 +512,8 @@ class ChatController {
     else if (users.filter( item => item.user === signInLogin.value === 1)) {
       let values = users.filter( item => item.user === signInLogin.value);
       signInLogin.style.border = 'var(--error-color)';
+
       if (values[0].password === signInPassword.value) {
-        console.log('Match');
         document.getElementById('authorization-container').style.display = "none";
         this.user = signInLogin.value;
         this.setCurrentUser(this.user);
@@ -513,7 +523,6 @@ class ChatController {
       else {
         signInPassword.style.border = 'var(--border-error)';
         document.getElementById('error-message').style.display = "inline";
-        console.log('Incorrect password.');
       }
     }
   }
@@ -526,7 +535,7 @@ class ChatApiService {
   }
 
   set url(url) {
-    this._serverURL = url;
+    this._url = url;
   }
 
   get url() {
@@ -557,6 +566,21 @@ class ChatApiService {
     const url = `${this.url}/users`;
     return fetch(url)
     .then( response => {
+      return {
+        status: response.status,
+        result: response.json()
+      }
+    });
+  }
+
+  login() {
+    let formData = new FormData();
+    const url = `${this.url}/auth/login`;
+    return fetch(url, {
+      method: 'POST',
+      body: formData
+    })
+    .then((response) => {
       return {
         status: response.status,
         result: response.json()
